@@ -1,0 +1,121 @@
+{
+  "devices": [
+    {
+      "device_id": "esp32_zone_a",
+      "device_type": "ESP32",
+      "location": "Zone A",
+      "sensors": [
+        {
+          "name": "LDR",
+          "readings": ["light_percent"],
+          "unit": ["%"]
+        }
+      ],
+      "actuators": [],
+      "publish_topic": "iot/zone/a/light",
+      "subscribe_topic": "iot/commands/zone_a",
+      "status": "online",
+      "last_seen": "2026-06-05T06:03:34Z"
+    },
+    {
+      "device_id": "esp32_zone_c",
+      "device_type": "ESP32",
+      "location": "Zone C",
+      "sensors": [
+        {
+          "name": "DHT11",
+          "readings": ["temperature", "humidity"],
+          "unit": ["\u00b0C", "%"]
+        }
+      ],
+      "actuators": [],
+      "publish_topic": "iot/zone/c/climate",
+      "subscribe_topic": "iot/commands/zone_c",
+      "status": "online",
+      "last_seen": "2026-06-05T06:03:34Z"
+    },
+    {
+      "device_id": "esp32_zone_d",
+      "device_type": "ESP32",
+      "location": "Zone D",
+      "sensors": [
+        {
+          "name": "MQ2",
+          "readings": ["gas_level"],
+          "unit": ["raw"]
+        }
+      ],
+      "actuators": [],
+      "publish_topic": "iot/zone/d/gas",
+      "subscribe_topic": "iot/commands/zone_d",
+      "status": "online",
+      "last_seen": "2026-06-05T06:03:34Z"
+    },
+    {
+      "device_id": "m3_node_100",
+      "device_type": "M3_Node",
+      "location": "FIT Lab Grenoble",
+      "sensors": [
+        {
+          "name": "LPS331AP",
+          "readings": ["temperature", "pressure"],
+          "unit": ["\u00b0C", "hPa"]
+        },
+        {
+          "name": "ISL29020",
+          "readings": ["light_level"],
+          "unit": ["lux"]
+        }
+      ],
+      "actuators": [],
+      "publish_topic": "iot/france/node/100",
+      "subscribe_topic": "iot/france/control/100",
+      "status": "online",
+      "last_seen": "2026-06-05T06:03:34Z"
+    },
+    {
+      "device_id": "m3_node_101",
+      "device_type": "M3_Node",
+      "location": "FIT Lab Grenoble",
+      "sensors": [
+        {
+          "name": "LPS331AP",
+          "readings": ["temperature", "pressure"],
+          "unit": ["\u00b0C", "hPa"]
+        },
+        {
+          "name": "ISL29020",
+          "readings": ["light_level"],
+          "unit": ["lux"]
+        }
+      ],
+      "actuators": [],
+      "publish_topic": "iot/france/node/101",
+      "subscribe_topic": "iot/france/control/101",
+      "status": "online",
+      "last_seen": "2026-06-05T06:03:34Z"
+    },
+    {
+      "device_id": "m3_node_102",
+      "device_type": "M3_Node",
+      "location": "FIT Lab Grenoble",
+      "sensors": [
+        {
+          "name": "LPS331AP",
+          "readings": ["temperature", "pressure"],
+          "unit": ["\u00b0C", "hPa"]
+        },
+        {
+          "name": "ISL29020",
+          "readings": ["light_level"],
+          "unit": ["lux"]
+        }
+      ],
+      "actuators": [],
+      "publish_topic": "iot/france/node/102",
+      "subscribe_topic": "iot/france/control/102",
+      "status": "online",
+      "last_seen": "2026-06-05T06:03:34Z"
+    }
+  ]
+}

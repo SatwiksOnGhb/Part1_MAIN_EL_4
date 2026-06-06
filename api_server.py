@@ -1,0 +1,191 @@
+import json
+import threading
+from datetime import datetime, timezone
+
+import paho.mqtt.client as mqtt
+from flask import Flask, jsonify
+
+from device_registry import DeviceRegistry
+
+
+BROKER = "broker.hivemq.com"
+MQTT_PORT = 8000
+API_PORT = 5000
+
+
+registry = DeviceRegistry()
+
+
+topic_to_device = {}
+for device_id, device in registry.devices.items():
+    topic_to_device[device.publish_topic] = device_id
+
+
+data_cache = {}
+cache_lock = threading.Lock()
+
+
+def make_mqtt_client():
+    try:
+        return mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, transport="websockets")
+    except (AttributeError, TypeError):
+        return mqtt.Client(transport="websockets")
+
+
+def on_connect(client, userdata, flags, rc):
+    if rc != 0:
+        print(f"[MQTT] Connection failed, rc={rc}")
+        return
+    print("[MQTT] Connected to HiveMQ")
+    for device in registry.devices.values():
+        client.subscribe(device.publish_topic)
+
+
+def on_message(client, userdata, msg):
+    topic = msg.topic
+    device_id = topic_to_device.get(topic)
+    if device_id is None:
+        return
+
+    try:
+        data = json.loads(msg.payload.decode("utf-8", errors="ignore"))
+    except json.JSONDecodeError:
+        return
+
+    if not isinstance(data, dict):
+        return
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+    with cache_lock:
+        data_cache[device_id] = {
+            "timestamp": timestamp,
+            "data": data,
+            "topic": topic,
+        }
+
+    registry.update_status(device_id, "online")
+
+
+def start_mqtt_subscriber():
+    client = make_mqtt_client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(BROKER, MQTT_PORT)
+    client.loop_forever()
+
+
+app = Flask(__name__)
+
+
+def device_summary(device):
+    summary = {
+        "id": device.device_id,
+        "type": device.device_type,
+        "location": device.location,
+        "sensors": [
+            {"name": s["name"], "readings": s.get("readings", [])}
+            for s in device.sensors
+        ],
+        "status": device.status,
+    }
+    if device.actuators:
+        summary["actuators"] = [
+            {"name": a["name"], "control": a.get("control", [])}
+            for a in device.actuators
+        ]
+    return summary
+
+
+@app.route("/api/devices")
+def get_all_devices():
+    devices = [device_summary(d) for d in registry.devices.values()]
+    return jsonify({"devices": devices})
+
+
+@app.route("/api/device/<device_id>/reading")
+def get_device_reading(device_id):
+    if device_id not in registry.devices:
+        return jsonify({"error": f"Device '{device_id}' not found"}), 404
+
+    with cache_lock:
+        entry = data_cache.get(device_id)
+
+    if entry is None:
+        return jsonify({
+            "device_id": device_id,
+            "reading": None,
+            "timestamp": None,
+            "message": "No data received yet",
+        }), 200
+
+    return jsonify({
+        "device_id": device_id,
+        "reading": entry["data"],
+        "timestamp": entry["timestamp"],
+    })
+
+
+@app.route("/api/zone/<zone>/devices")
+def get_zone_devices(zone):
+    matches = registry.get_device_by_location(zone)
+    devices = [
+        {
+            "id": d.device_id,
+            "sensors": [
+                {"name": s["name"], "readings": s.get("readings", [])}
+                for s in d.sensors
+            ],
+        }
+        for d in matches
+    ]
+    return jsonify({"zone": zone, "devices": devices})
+
+
+@app.route("/api/network/topology")
+def get_network_topology():
+    nodes = list(registry.devices.keys()) + ["hivemq_broker"]
+    edges = []
+    for device_id in registry.devices:
+        edges.append({"source": device_id, "target": "hivemq_broker"})
+        edges.append({"source": "hivemq_broker", "target": device_id})
+    return jsonify({"nodes": nodes, "edges": edges})
+
+
+@app.route("/api/cache/all")
+def get_full_cache():
+    with cache_lock:
+        snapshot = {
+            device_id: {
+                "data": entry["data"],
+                "timestamp": entry["timestamp"],
+                "topic": entry["topic"],
+            }
+            for device_id, entry in data_cache.items()
+        }
+    return jsonify(snapshot)
+
+
+@app.route("/")
+def index():
+    return jsonify({
+        "service": "IoT Device API",
+        "endpoints": [
+            "GET /api/devices",
+            "GET /api/device/<device_id>/reading",
+            "GET /api/zone/<zone>/devices",
+            "GET /api/network/topology",
+            "GET /api/cache/all",
+        ],
+    })
+
+
+def main():
+    mqtt_thread = threading.Thread(target=start_mqtt_subscriber, daemon=True)
+    mqtt_thread.start()
+    print(f"[API] Running on http://localhost:{API_PORT}")
+    app.run(host="0.0.0.0", port=API_PORT, debug=False, use_reloader=False)
+
+
+if __name__ == "__main__":
+    main()
