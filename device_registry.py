@@ -1,5 +1,24 @@
 import json
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _parse_timestamp(value):
+    """Parse a timestamp string in IST or UTC; return tz-aware datetime."""
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S.%f%z"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
 
 
 class Device:
@@ -51,24 +70,21 @@ class DeviceRegistry:
         return [d for d in self.devices.values() if d.actuators]
 
     def update_status(self, device_id, status):
-        from datetime import datetime, timezone
         device = self.devices.get(device_id)
         if device is None:
             return False
         device.status = status
-        device.last_seen = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        device.last_seen = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S%z")
         return True
 
     def is_online(self, device_id, timeout_seconds=120):
-        from datetime import datetime, timezone
         device = self.devices.get(device_id)
         if device is None:
             return False
-        try:
-            last_seen_dt = datetime.strptime(device.last_seen, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        except (ValueError, TypeError):
+        last_seen_dt = _parse_timestamp(device.last_seen)
+        if last_seen_dt is None:
             return False
-        age = (datetime.now(timezone.utc) - last_seen_dt).total_seconds()
+        age = (datetime.now(IST) - last_seen_dt).total_seconds()
         return age <= timeout_seconds
 
     def get_capabilities(self, device_id):

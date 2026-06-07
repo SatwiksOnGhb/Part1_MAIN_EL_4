@@ -1,6 +1,6 @@
 import json
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import paho.mqtt.client as mqtt
 from flask import Flask, jsonify
@@ -8,9 +8,18 @@ from flask import Flask, jsonify
 from device_registry import DeviceRegistry
 
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
 BROKER = "broker.hivemq.com"
 MQTT_PORT = 8000
 API_PORT = 5000
+OFFLINE_TIMEOUT_SECONDS = 30
+OFFLINE_CHECK_INTERVAL_SECONDS = 10
+SNAPSHOT_FILE = "live_state.json"
+SNAPSHOT_INTERVAL_SECONDS = 5
+M3_POLL_INTERVAL_SECONDS = 30
+M3_POLL_COMMANDS = ["t", "l", "p"]
 
 
 registry = DeviceRegistry()
@@ -55,7 +64,7 @@ def on_message(client, userdata, msg):
     if not isinstance(data, dict):
         return
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    timestamp = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S.%f%z")
 
     with cache_lock:
         data_cache[device_id] = {
@@ -73,6 +82,77 @@ def start_mqtt_subscriber():
     client.on_message = on_message
     client.connect(BROKER, MQTT_PORT)
     client.loop_forever()
+
+
+def start_m3_auto_poller():
+    import time
+    publisher = make_mqtt_client()
+    try:
+        publisher.connect(BROKER, MQTT_PORT)
+        publisher.loop_start()
+    except Exception as exc:
+        print(f"[POLLER] Failed to connect publisher: {exc}")
+        return
+    print(f"[POLLER] Auto-polling M3 nodes every {M3_POLL_INTERVAL_SECONDS}s")
+    cmd_index = 0
+    while True:
+        time.sleep(M3_POLL_INTERVAL_SECONDS)
+        command = M3_POLL_COMMANDS[cmd_index % len(M3_POLL_COMMANDS)]
+        cmd_index += 1
+        for device_id, device in registry.devices.items():
+            if device.device_type != "M3_Node":
+                continue
+            payload = json.dumps({"command": command})
+            try:
+                publisher.publish(device.subscribe_topic, payload)
+            except Exception as exc:
+                print(f"[POLLER] Failed to publish to {device_id}: {exc}")
+
+
+def start_offline_checker():
+    import time
+    while True:
+        time.sleep(OFFLINE_CHECK_INTERVAL_SECONDS)
+        for device_id, device in registry.devices.items():
+            if not registry.is_online(device_id, timeout_seconds=OFFLINE_TIMEOUT_SECONDS):
+                if device.status != "offline":
+                    device.status = "offline"
+
+
+def start_snapshot_writer():
+    import time
+    from pathlib import Path
+    output_path = Path(__file__).parent / SNAPSHOT_FILE
+    while True:
+        time.sleep(SNAPSHOT_INTERVAL_SECONDS)
+        try:
+            with cache_lock:
+                cache_snapshot = {
+                    device_id: {
+                        "data": entry["data"],
+                        "timestamp": entry["timestamp"],
+                        "topic": entry["topic"],
+                    }
+                    for device_id, entry in data_cache.items()
+                }
+            status_snapshot = {}
+            for device_id, device in registry.devices.items():
+                status_snapshot[device_id] = {
+                    "online": registry.is_online(device_id, timeout_seconds=OFFLINE_TIMEOUT_SECONDS),
+                    "status": device.status,
+                    "last_seen": device.last_seen,
+                    "location": device.location,
+                    "device_type": device.device_type,
+                }
+            snapshot = {
+                "updated_at": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "status": status_snapshot,
+                "cache": cache_snapshot,
+            }
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f, indent=2)
+        except Exception as exc:
+            print(f"[SNAPSHOT] Failed to write {SNAPSHOT_FILE}: {exc}")
 
 
 app = Flask(__name__)
@@ -166,6 +246,19 @@ def get_full_cache():
     return jsonify(snapshot)
 
 
+@app.route("/api/status")
+def get_status():
+    status = {}
+    for device_id, device in registry.devices.items():
+        online = registry.is_online(device_id, timeout_seconds=OFFLINE_TIMEOUT_SECONDS)
+        status[device_id] = {
+            "online": online,
+            "status": device.status,
+            "last_seen": device.last_seen,
+        }
+    return jsonify(status)
+
+
 @app.route("/")
 def index():
     return jsonify({
@@ -176,6 +269,7 @@ def index():
             "GET /api/zone/<zone>/devices",
             "GET /api/network/topology",
             "GET /api/cache/all",
+            "GET /api/status",
         ],
     })
 
@@ -183,7 +277,18 @@ def index():
 def main():
     mqtt_thread = threading.Thread(target=start_mqtt_subscriber, daemon=True)
     mqtt_thread.start()
+
+    offline_thread = threading.Thread(target=start_offline_checker, daemon=True)
+    offline_thread.start()
+
+    snapshot_thread = threading.Thread(target=start_snapshot_writer, daemon=True)
+    snapshot_thread.start()
+
+    poller_thread = threading.Thread(target=start_m3_auto_poller, daemon=True)
+    poller_thread.start()
+
     print(f"[API] Running on http://localhost:{API_PORT}")
+    print(f"[SNAPSHOT] Writing {SNAPSHOT_FILE} every {SNAPSHOT_INTERVAL_SECONDS}s")
     app.run(host="0.0.0.0", port=API_PORT, debug=False, use_reloader=False)
 
 
