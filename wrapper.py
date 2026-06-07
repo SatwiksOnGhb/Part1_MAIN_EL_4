@@ -18,10 +18,11 @@ print("\n" + "=" * 70)
 print("IoT Mesh System Wrapper")
 print("=" * 70)
 
-# Get FIT password from user (once)
+# Get FIT credentials from user (once)
 print("\n[Setup] FIT Server Credentials")
 print("-" * 70)
-fit_password = getpass.getpass("FIT account password (sray): ")
+fit_username = input("FIT username: ").strip()
+fit_password = getpass.getpass("FIT password: ")
 
 # Step 1: SSH to FIT and start bridge.py in background
 print("\n[1/2] Starting bridge.py on FIT server...")
@@ -36,10 +37,22 @@ try:
     # Connect with password auth
     ssh.connect(
         "grenoble.iot-lab.info",
-        username="sray",
+        username=fit_username,
         password=fit_password,
         timeout=10
     )
+    
+    # Auto-upload bridge.py to FIT server
+    local_bridge = PROJECT_DIR / "bridge.py"
+    if not local_bridge.exists():
+        print("✗ bridge.py not found in project folder")
+        sys.exit(1)
+    
+    print("  Uploading bridge.py to FIT server...")
+    sftp = ssh.open_sftp()
+    sftp.put(str(local_bridge), "bridge.py")
+    sftp.close()
+    print("  ✓ bridge.py uploaded")
     
     # Start bridge.py in background (nohup so it survives SSH disconnect)
     stdin, stdout, stderr = ssh.exec_command("nohup python3 bridge.py > bridge.log 2>&1 &")
