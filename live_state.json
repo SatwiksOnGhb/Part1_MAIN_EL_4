@@ -1,45 +1,45 @@
 {
-  "updated_at": "2026-06-07T11:58:23+0530",
+  "updated_at": "2026-06-07T13:24:48+0530",
   "status": {
     "esp32_zone_a": {
       "online": false,
       "status": "offline",
-      "last_seen": "2026-06-07T11:52:33+0530",
+      "last_seen": "2026-06-05T06:03:34Z",
       "location": "Zone A",
       "device_type": "ESP32"
     },
     "esp32_zone_c": {
       "online": true,
       "status": "online",
-      "last_seen": "2026-06-07T11:58:19+0530",
+      "last_seen": "2026-06-07T13:24:44+0530",
       "location": "Zone C",
       "device_type": "ESP32"
     },
     "esp32_zone_d": {
       "online": true,
       "status": "online",
-      "last_seen": "2026-06-07T11:58:21+0530",
+      "last_seen": "2026-06-07T13:24:45+0530",
       "location": "Zone D",
       "device_type": "ESP32"
     },
     "m3_node_100": {
       "online": true,
       "status": "online",
-      "last_seen": "2026-06-07T11:58:04+0530",
+      "last_seen": "2026-06-07T13:24:19+0530",
       "location": "FIT Lab Grenoble",
       "device_type": "M3_Node"
     },
     "m3_node_101": {
       "online": true,
       "status": "online",
-      "last_seen": "2026-06-07T11:58:04+0530",
+      "last_seen": "2026-06-07T13:24:19+0530",
       "location": "FIT Lab Grenoble",
       "device_type": "M3_Node"
     },
     "m3_node_102": {
       "online": true,
       "status": "online",
-      "last_seen": "2026-06-07T11:58:04+0530",
+      "last_seen": "2026-06-07T13:24:19+0530",
       "location": "FIT Lab Grenoble",
       "device_type": "M3_Node"
     }
@@ -48,72 +48,60 @@
     "m3_node_100": {
       "data": {
         "node": "100",
-        "command": "l",
-        "command_output": "Luminosity measure: 2.4414062E-1 lux\n\ncmd >",
-        "timestamp": 1780813684.5982099,
+        "command": "t",
+        "command_output": "Chip temperature measure: 3.9472916E1\n\ncmd >",
+        "timestamp": 1780818859.3305767,
         "origin": "france"
       },
-      "timestamp": "2026-06-07T11:58:04.957280+0530",
+      "timestamp": "2026-06-07T13:24:19.149658+0530",
       "topic": "iot/france/node/100"
     },
     "m3_node_101": {
       "data": {
         "node": "101",
-        "command": "l",
-        "command_output": "Luminosity measure: 2.4414062E-1 lux\n\ncmd >",
-        "timestamp": 1780813684.8581076,
+        "command": "t",
+        "command_output": "Chip temperature measure: 4.0260418E1\n\ncmd >",
+        "timestamp": 1780818859.5256143,
         "origin": "france"
       },
-      "timestamp": "2026-06-07T11:58:04.957430+0530",
+      "timestamp": "2026-06-07T13:24:19.437913+0530",
       "topic": "iot/france/node/101"
     },
     "m3_node_102": {
       "data": {
         "node": "102",
-        "command": "l",
-        "command_output": "Luminosity measure: 2.4414062E-1 lux\n\ncmd >",
-        "timestamp": 1780813684.7623706,
+        "command": "t",
+        "command_output": "Chip temperature measure: 3.825E1\n\ncmd >",
+        "timestamp": 1780818859.6224074,
         "origin": "france"
       },
-      "timestamp": "2026-06-07T11:58:04.957396+0530",
+      "timestamp": "2026-06-07T13:24:19.455776+0530",
       "topic": "iot/france/node/102"
-    },
-    "esp32_zone_d": {
-      "data": {
-        "node": "esp32-node4",
-        "zone": "D",
-        "sensor": "MQ2",
-        "gas_level": 581,
-        "alert": false,
-        "status": "normal",
-        "active": true
-      },
-      "timestamp": "2026-06-07T11:58:21.830929+0530",
-      "topic": "iot/zone/d/gas"
-    },
-    "esp32_zone_a": {
-      "data": {
-        "node": "esp32-node1",
-        "zone": "A",
-        "sensor": "LDR",
-        "light_percent": 98,
-        "raw": 90,
-        "active": true
-      },
-      "timestamp": "2026-06-07T11:52:33.335338+0530",
-      "topic": "iot/zone/a/light"
     },
     "esp32_zone_c": {
       "data": {
         "node": "esp32-node3",
         "zone": "C",
         "sensor": "DHT11",
-        "temperature": 29.1,
-        "humidity": 60.0,
+        "temperature": 30.7,
+        "humidity": 59.0,
         "active": true
       },
-      "timestamp": "2026-06-07T11:58:19.645325+0530",
+      "timestamp": "2026-06-07T13:24:44.579561+0530",
       "topic": "iot/zone/c/climate"
+    },
+    "esp32_zone_d": {
+      "data": {
+        "node": "esp32-node4",
+        "zone": "D",
+        "sensor": "MQ2",
+        "gas_level": 294,
+        "alert": false,
+        "status": "normal",
+        "active": true
+      },
+      "timestamp": "2026-06-07T13:24:45.530388+0530",
+      "topic": "iot/zone/d/gas"
     }
   }
 }
